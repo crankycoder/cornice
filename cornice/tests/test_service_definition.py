@@ -14,6 +14,8 @@ from cornice.tests import CatchErrors
 service1 = Service(name="service1", path="/service1")
 service2 = Service(name="service2", path="/service2")
 service3 = Service(name="service3", path="/service3")
+service4 = Service(name="service4", path="/service4")
+service5 = Service(name="service5", path="/service5")
 
 
 @service1.get()
@@ -47,10 +49,22 @@ def wrap_fn(fn):
 
 
 @service3.get(decorators=[wrap_fn])
-@service3.post()
 def wrapped_get3(request):
     return {"test": "succeeded"}
 
+
+@service4.post(decorators=[wrap_fn])
+@service4.get(decorators=[wrap_fn])
+def wrapped_get4(request):
+    return {"test": "succeeded"}
+
+
+@service5.get(decorators=[wrap_fn])
+@service5.get(accept="application/json", renderer="simplejson")
+@service5.get(accept="application/newlines", renderer="newlines")
+@service5.post(decorators=[wrap_fn])
+def wrapped_get5(request):
+    return {"test": "succeeded"}
 
 class TestServiceDefinition(unittest.TestCase):
 
@@ -104,3 +118,14 @@ class TestServiceDefinition(unittest.TestCase):
         # decorated view callable
         resp = self.app.get("/service3")
         self.assertEquals(resp.json, {'test': 'succeeded', 'wrapped0': 'yes'})
+
+    def test_stacked_decorated_view(self):
+        # passing a decorator in to the service api call should result in a
+        # decorated view callable, ordering of the particular decorators
+        # shouldn't break things
+        resp = self.app.get("/service4")
+        self.assertEquals(resp.json, {'test': 'succeeded', 'wrapped0': 'yes'})
+
+        resp = self.app.get("/service5")
+        self.assertEquals(resp.json, {'test': 'succeeded', 'wrapped0': 'yes'})
+
