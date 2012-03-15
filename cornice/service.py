@@ -240,23 +240,21 @@ class Service(object):
                     config.add_view(view=view, route_name=self.route_name,
                                         **view_kw)
 
-            wrapped_func = func
+
+            applied_set = set()
+            if hasattr(func, '_metlog_decorators'):
+                applied_set.update(func._metlog_decorators)
+
             for decorator in decorators:
                 # Stacked api decorators may result in this being called more
                 # than once for the same function, we need to make sure that
                 # the original function isn't wrapped more than once by the
                 # same functions.
-                try:
-                    func_is_instance = isinstance(func, decorator)
-                except TypeError:
-                    func_is_instance = False
-                if func is decorator or func_is_instance:
-                    # `func` is already one of the provided decorators, assume
-                    # we've already wrapped this one and skip it this time
-                    break
-                wrapped_func = decorator(wrapped_func)
-            else:
-                func = wrapped_func
+                if decorator not in applied_set:
+                    func = decorator(func)
+                    applied_set.add(decorator)
+
+            func._metlog_decorators = applied_set
 
             info = venusian.attach(func, callback, category='pyramid')
 
